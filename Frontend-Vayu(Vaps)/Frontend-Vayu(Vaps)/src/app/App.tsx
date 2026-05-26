@@ -196,19 +196,31 @@ const [initialLoad, setInitialLoad] = useState(true);
         />
 
         {/* GRAPH */}
-       <AQIGraph 
-  city={city} 
-  mlData={mlData} 
-  currentAQI={aqiData?.aqi ?? 0}
-/>
+       <div id="aqi-graph">
+  <AQIGraph 
+    city={city} 
+    mlData={mlData} 
+    currentAQI={aqiData?.aqi ?? 0}
+  />
+</div>
 
+<CityBelts />
 
-        <CityBelts />
-        <HealthTips />
-        <NewsSection city={city} />
-        <AQIImportance />
-        <FAQs />
-        <Footer />
+<div id="health-tips">
+  <HealthTips />
+</div>
+
+<div id="news">
+  <NewsSection city={city} />
+</div>
+
+<AQIImportance />
+
+<div id="faqs">
+  <FAQs />
+</div>
+
+<Footer />
 
       </main>
 

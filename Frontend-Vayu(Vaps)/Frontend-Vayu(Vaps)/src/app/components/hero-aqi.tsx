@@ -1,22 +1,8 @@
-import { MapPin, Sun } from "lucide-react";
-import { Wind } from "lucide-react";
+import { MapPin, Sun, Wind } from "lucide-react";
 import { AQIMap } from "./aqi-map";
 import { useTranslation } from "react-i18next";
-
-const cityTranslations: Record<string, Record<string, string>> = {
-  hi: {
-    Delhi: "दिल्ली", Mumbai: "मुंबई", Bangalore: "बेंगलुरु",
-    Chennai: "चेन्नई", Kolkata: "कोलकाता", Hyderabad: "हैदराबाद",
-    Pune: "पुणे", Ahmedabad: "अहमदाबाद", Jaipur: "जयपुर",
-    Lucknow: "लखनऊ", Chandigarh: "चंडीगढ़", Bhopal: "भोपाल",
-    Indore: "इंदौर", Patna: "पटना", Kanpur: "कानपुर",
-    Nagpur: "नागपुर", Surat: "सूरत", Varanasi: "वाराणसी",
-    Agra: "आगरा", Amritsar: "अमृतसर", Jodhpur: "जोधपुर",
-    Kota: "कोटा", Guwahati: "गुवाहाटी", Raipur: "रायपुर",
-    Ranchi: "रांची", Coimbatore: "कोयंबटूर", Visakhapatnam: "विशाखापट्टनम",
-    Bhubaneswar: "भुवनेश्वर", Dehradun: "देहरादून", Noida: "नोएडा",
-  },
-};
+import { useState, useEffect } from "react";
+import { useNLPTranslation } from "@/hooks/useNLPTranslation";
 
 interface HeroAQIProps {
   searchedCity?: string;
@@ -36,29 +22,31 @@ interface HeroAQIProps {
 }
 
 export function HeroAQI({
-  aqi,
-  city,
-  lat,
-  lon,
-  temperature,
-  humidity,
-  wind,
-  weatherCondition,
-  searchedCity,
-  pollutants,
+  aqi, city, lat, lon, temperature, humidity, wind,
+  weatherCondition, searchedCity, pollutants,
 }: HeroAQIProps) {
   const { t, i18n } = useTranslation();
+  const { translateBatch } = useNLPTranslation();
+  const [translatedStation, setTranslatedStation] = useState("");
+  const [translatedCity, setTranslatedCity] = useState("");
 
-  const translateCity = (name?: string) => {
-  if (!name) return t("unknown");
-  const lang = i18n.language;
-  const map = cityTranslations[lang];
-  if (!map) return name;
-  const key = Object.keys(map).find(
-    (k) => k.toLowerCase() === name.toLowerCase()
-  );
-  return key ? map[key] : name;
-};
+  useEffect(() => {
+    const stationName = city?.split(",")[0] || "";
+    const cityName = searchedCity?.includes(",")
+      ? "Current Location"
+      : (searchedCity || "");
+
+    if (i18n.language === "en") {
+      setTranslatedStation(stationName);
+      setTranslatedCity(cityName);
+      return;
+    }
+
+    translateBatch([stationName, cityName], i18n.language).then((translated) => {
+      setTranslatedStation(translated[0] || stationName);
+      setTranslatedCity(translated[1] || cityName);
+    });
+  }, [city, searchedCity, i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getAQIColor = (value?: number) => {
     if (value === undefined) return "#9ca3af";
@@ -97,91 +85,85 @@ export function HeroAQI({
       <div className="relative max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 gap-6">
 
-         {/* LEFT CARD */}
-<div className="backdrop-blur-[15px] bg-white/40 border border-white/30 rounded-3xl p-8 shadow-lg min-h-[500px] flex flex-col justify-between">
+          {/* LEFT CARD */}
+          <div className="backdrop-blur-[15px] bg-white/40 border border-white/30 rounded-3xl p-8 shadow-lg min-h-[500px] flex flex-col justify-between">
 
-  {/* LOCATION */}
-  <div className="flex items-center gap-2 mb-6">
-    <div className="relative flex items-center justify-center">
-      <span className="absolute w-6 h-6 rounded-full bg-red-400 opacity-30 animate-ping"></span>
-      <MapPin className="w-5 h-5 text-red-500 relative z-10" />
-    </div>
-   <div className="flex flex-col">
- <div className="flex flex-col">
-  <span className="text-xl font-semibold text-[#333333]">
-    {translateCity(city?.split(",")[0])}
-  </span>
-  <span className="text-sm text-gray-400 capitalize mt-0.5">
-    {searchedCity?.includes(",") ? "Current Location" : searchedCity}
-  </span>
-</div>
-  <span className="text-sm text-gray-400 capitalize">
-    {city?.split(",")[0] || ""}
-  </span>
-</div>
-  </div>
+            {/* LOCATION */}
+            <div className="flex items-center gap-2 mb-6">
+              <div className="relative flex items-center justify-center">
+                <span className="absolute w-6 h-6 rounded-full bg-red-400 opacity-30 animate-ping"></span>
+                <MapPin className="w-5 h-5 text-red-500 relative z-10" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xl font-semibold text-[#333333]">
+                  {translatedStation || city?.split(",")[0] || t("unknown")}
+                </span>
+                <span className="text-sm text-gray-400 mt-0.5">
+                  {translatedCity || (searchedCity?.includes(",") ? "Current Location" : searchedCity)}
+                </span>
+              </div>
+            </div>
 
-  {/* AQI + WEATHER */}
-  <div className="flex items-start justify-between mb-10 pr-4">
+            {/* AQI + WEATHER */}
+            <div className="flex items-start justify-between mb-10 pr-4">
 
-    {/* AQI */}
-    <div>
-      <div className="text-9xl font-bold mb-2" style={{ color: aqiColor }}>
-        {aqi ?? "--"}
-      </div>
-      <div className="text-2xl mb-4 text-[#333333] font-semibold">{t("aqi")}</div>
-      <div
-        className="inline-block px-4 py-1.5 rounded-full text-white font-medium text-sm"
-        style={{ backgroundColor: aqiColor }}
-      >
-        {aqiStatus}
-      </div>
-    </div>
+              {/* AQI */}
+              <div>
+                <div className="text-9xl font-bold mb-2" style={{ color: aqiColor }}>
+                  {aqi ?? "--"}
+                </div>
+                <div className="text-2xl mb-4 text-[#333333] font-semibold">{t("aqi")}</div>
+                <div
+                  className="inline-block px-4 py-1.5 rounded-full text-white font-medium text-sm"
+                  style={{ backgroundColor: aqiColor }}
+                >
+                  {aqiStatus}
+                </div>
+              </div>
 
-    {/* WEATHER */}
-    <div className="p-5 rounded-2xl bg-white/60 border border-white/30 flex flex-col items-center gap-3 min-w-[110px]">
-      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#FFE66D] to-[#FFA552] flex items-center justify-center">
-        <Sun className="w-7 h-7 text-white" />
-      </div>
-      <div className="text-center">
-        <div className="text-2xl font-bold text-[#333333]">
-          {temperature !== undefined ? `${Math.round(temperature)}°C` : "--"}
-        </div>
-        <div className="text-sm text-[#555] mt-1 capitalize">
-          {weatherCondition || "Sunny"}
-        </div>
-      </div>
-    </div>
-  </div>
+              {/* WEATHER */}
+              <div className="p-5 rounded-2xl bg-white/60 border border-white/30 flex flex-col items-center gap-3 min-w-[110px]">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#FFE66D] to-[#FFA552] flex items-center justify-center">
+                  <Sun className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-[#333333]">
+                    {temperature !== undefined ? `${Math.round(temperature)}°C` : "--"}
+                  </div>
+                  <div className="text-sm text-[#555] mt-1 capitalize">
+                    {weatherCondition || "Sunny"}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-  {/* POLLUTANTS */}
-  <div className="grid grid-cols-3 gap-3">
-    {[
-      { name: "PM2.5", value: pollutants?.pm25 },
-      { name: "PM10", value: pollutants?.pm10 },
-      { name: "O3", value: pollutants?.o3 },
-    ].map((item, i) => (
-      <div
-        key={i}
-        className="flex flex-col items-center p-4 rounded-2xl bg-white/40 border border-white/30"
-      >
-        <div className="w-14 h-14 rounded-full bg-blue-100/60 flex items-center justify-center mb-2">
-  <Wind className="w-7 h-7 text-blue-400" />
-          <Wind className="w-5 h-5 text-blue-400" />
-        </div>
-        <div className="text-sm font-medium text-[#555]">{item.name}</div>
-        <div className="text-base font-bold text-[#333] mt-1">
-          {item.value !== undefined && item.value !== null ? item.value : "--"}
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
+            {/* POLLUTANTS */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { name: "PM2.5", value: pollutants?.pm25 },
+                { name: "PM10", value: pollutants?.pm10 },
+                { name: "O3", value: pollutants?.o3 },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col items-center p-4 rounded-2xl bg-white/40 border border-white/30"
+                >
+                  <div className="w-14 h-14 rounded-full bg-blue-100/60 flex items-center justify-center mb-2">
+                    <Wind className="w-7 h-7 text-blue-400" />
+                  </div>
+                  <div className="text-sm font-medium text-[#555]">{item.name}</div>
+                  <div className="text-base font-bold text-[#333] mt-1">
+                    {item.value !== undefined && item.value !== null ? item.value : "--"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* RIGHT CARD — MAP */}
           <div className="backdrop-blur-[15px] bg-white/40 border border-white/30 rounded-3xl p-4 shadow-lg">
             <p className="text-sm font-semibold text-[#555] mb-2 capitalize px-2">
-              {city ? `${city} Region` : "Region"}
+              {translatedCity || searchedCity || city?.split(",")[0]} Region
             </p>
             <div className="relative w-full h-[420px] rounded-2xl overflow-hidden">
               {lat !== undefined && lon !== undefined ? (
